@@ -112,7 +112,7 @@ var CDJapanSearch = {
 }
 
 var MFCSearch = {
-    search: function(keywords){
+    search: async function(keywords){
         let joined = keywords.join("+");
         let base = "https://myfigurecollection.net/browse.v4.php?keywords=";
 
@@ -126,20 +126,16 @@ var MFCSearch = {
                 let search_results = MFCSearch.parse_search(html)
                 //console.log(search_results); // works!
                 let base = "https://myfigurecollection.net";
-                for (item of search_results){
+
+                let tasks = search_results.map(item => {
                     let uri = "{0}{1}".formatUnicorn(base, item);
-                    //console.log("uri:", uri) //works!
                     let item_options = {
                         url: uri,
-                    }
-                    rp(item_options)
-                        .then(item_html =>{
-                            let jan = MFCSearch.extract_jan(item_html);
-                            if (jan != -1){
-                                console.log(jan);
-                            }
-                        });
-                }
+                    };
+                    return rp(item_options);
+                });
+                
+                return Promise.all(tasks);
             });
     },
     parse_search: function(html){
@@ -150,6 +146,18 @@ var MFCSearch = {
         let result  = match.filter(elem => elem.includes('item'));
         //console.log(result);
         return result; 
+    },
+
+    extract_job: async function(request_options){
+        rp(request_options)
+            .then(item_html =>{
+                return MFCSearch.extract_jan(item_html);
+                // let jan = MFCSearch.extract_jan(item_html);
+                // if (jan != -1){
+                //     console.log(jan);
+                //     return jan;
+                // }
+            });
     },
 
     extract_jan: function(html){
@@ -181,12 +189,23 @@ var MFCSearch = {
     },
 }
 
+function lookup(keywords){
+    MFCSearch.search(keywords);
+}
+
 
 var test = function(){
     let keywords = ["Pikachu","figure"];
     
-    MFCSearch.search(keywords);
+    lookup(keywords);
 };
 
-test();
+module.exports = {
+    lookup:  lookup,
+}
+
+if (require.main === module){
+    test();
+}
+
 
